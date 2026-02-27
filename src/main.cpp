@@ -55,9 +55,9 @@ std::string Trim(std::string s) {
 std::filesystem::path WorkspaceHintPath() {
   const char* home = std::getenv("HOME");
   if (home && *home) {
-    return std::filesystem::path(home) / ".llm_audit_gui" / "last_workspace.txt";
+    return std::filesystem::path(home) / ".api_tester" / "last_workspace.txt";
   }
-  return std::filesystem::path(".llm_audit_gui") / "last_workspace.txt";
+  return std::filesystem::path(".api_tester") / "last_workspace.txt";
 }
 
 bool SaveWorkspaceHint(const std::string& workspace, std::string& error) {
@@ -289,7 +289,7 @@ void HandleTextInput(std::string& target, std::size_t max_len = 1024) {
 
 int main() {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
-  InitWindow(1580, 980, "LLM API Inspector - Cross Platform GUI");
+  InitWindow(1580, 980, "API-Tester - Cross Platform GUI");
   SetTargetFPS(60);
 
   std::vector<KeyField> fields = {
@@ -425,7 +425,7 @@ int main() {
     DrawCircleV({sw * 0.11f, static_cast<float>(sh) * 0.82f}, 260.0f, {72, 137, 208, 20});
 
     DrawCard(header, {27, 41, 54, 230}, {82, 139, 168, 255});
-    DrawText("LLM API Inspector", static_cast<int>(header.x + 18), static_cast<int>(header.y + 16), 34,
+    DrawText("API-Tester", static_cast<int>(header.x + 18), static_cast<int>(header.y + 16), 34,
              {239, 245, 250, 255});
     DrawText("Modern cross-platform auditor for API limits, models, working checks and quality tests",
              static_cast<int>(header.x + 20), static_cast<int>(header.y + 54), 18, {169, 203, 220, 255});

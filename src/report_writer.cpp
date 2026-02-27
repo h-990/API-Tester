@@ -24,34 +24,39 @@ std::string TimestampFile() {
   return oss.str();
 }
 
-}  // namespace
+} // namespace
 
-std::string WriteJsonReport(const AuditReport& report, const std::filesystem::path& out_dir) {
+std::string WriteJsonReport(const AuditReport &report,
+                            const std::filesystem::path &out_dir) {
   std::filesystem::create_directories(out_dir);
   const auto file = out_dir / ("llm_api_audit_" + TimestampFile() + ".json");
 
   std::ofstream ofs(file, std::ios::out | std::ios::trunc);
-  if (!ofs) return {};
+  if (!ofs)
+    return {};
 
   ofs << ReportToJson(report).dump(2);
   return file.string();
 }
 
-std::string WriteTextReport(const AuditReport& report, const std::filesystem::path& out_dir) {
+std::string WriteTextReport(const AuditReport &report,
+                            const std::filesystem::path &out_dir) {
   std::filesystem::create_directories(out_dir);
   const auto file = out_dir / ("llm_api_audit_" + TimestampFile() + ".txt");
 
   std::ofstream ofs(file, std::ios::out | std::ios::trunc);
-  if (!ofs) return {};
+  if (!ofs)
+    return {};
 
-  ofs << "LLM API KEYS FULL AUDIT REPORT\n";
+  ofs << "API-TESTER FULL AUDIT REPORT\n";
   ofs << "Generated at (UTC): " << report.generated_at_utc << "\n";
   ofs << "\n";
   ofs << "========================= RUN LOGS =========================\n";
-  for (const auto& line : report.run_logs) ofs << line << "\n";
+  for (const auto &line : report.run_logs)
+    ofs << line << "\n";
   ofs << "\n";
 
-  for (const auto& p : report.providers) {
+  for (const auto &p : report.providers) {
     ofs << "============================================================\n";
     ofs << "PROVIDER: " << p.provider_name << " (" << p.provider_id << ")\n";
     ofs << "API KEY: " << p.api_key << "\n";
@@ -74,25 +79,31 @@ std::string WriteTextReport(const AuditReport& report, const std::filesystem::pa
     ofs << "error_snippet: " << p.error_snippet << "\n";
 
     ofs << "capability_tags:\n";
-    for (const auto& c : p.capability_tags) ofs << "  - " << c << "\n";
+    for (const auto &c : p.capability_tags)
+      ofs << "  - " << c << "\n";
 
     ofs << "sample_models:\n";
-    for (const auto& m : p.sample_models) ofs << "  - " << m << "\n";
+    for (const auto &m : p.sample_models)
+      ofs << "  - " << m << "\n";
 
     ofs << "working_models:\n";
-    for (const auto& m : p.working_models) ofs << "  - " << m << "\n";
+    for (const auto &m : p.working_models)
+      ofs << "  - " << m << "\n";
 
     ofs << "failing_models:\n";
-    for (const auto& m : p.failing_models) ofs << "  - " << m << "\n";
+    for (const auto &m : p.failing_models)
+      ofs << "  - " << m << "\n";
 
     ofs << "auth_rate_limit_headers:\n";
-    for (const auto& [k, v] : p.auth_rate_limit_headers) ofs << "  " << k << ": " << v << "\n";
+    for (const auto &[k, v] : p.auth_rate_limit_headers)
+      ofs << "  " << k << ": " << v << "\n";
 
     ofs << "models_rate_limit_headers:\n";
-    for (const auto& [k, v] : p.models_rate_limit_headers) ofs << "  " << k << ": " << v << "\n";
+    for (const auto &[k, v] : p.models_rate_limit_headers)
+      ofs << "  " << k << ": " << v << "\n";
 
     ofs << "model_checks:\n";
-    for (const auto& c : p.model_checks) {
+    for (const auto &c : p.model_checks) {
       ofs << "  - model: " << c.model << "\n";
       ofs << "    status: " << c.status << "\n";
       ofs << "    latency_ms: " << c.latency_ms << "\n";
@@ -101,20 +112,20 @@ std::string WriteTextReport(const AuditReport& report, const std::filesystem::pa
     }
 
     ofs << "prompt_tests:\n";
-    for (const auto& t : p.prompt_tests) {
+    for (const auto &t : p.prompt_tests) {
       ofs << "  - name: " << t.name << "\n";
       ofs << "    status: " << t.status << "\n";
       ofs << "    latency_ms: " << t.latency_ms << "\n";
       ofs << "    answer: " << t.answer << "\n";
       ofs << "    error_snippet: " << t.error_snippet << "\n";
       ofs << "    rate_limit_headers:\n";
-      for (const auto& [k, v] : t.rate_limit_headers) {
+      for (const auto &[k, v] : t.rate_limit_headers) {
         ofs << "      " << k << ": " << v << "\n";
       }
     }
 
     ofs << "request_traces:\n";
-    for (const auto& tr : p.request_traces) {
+    for (const auto &tr : p.request_traces) {
       ofs << "  - step: " << tr.step << "\n";
       ofs << "    method: " << tr.method << "\n";
       ofs << "    url: " << tr.url << "\n";
@@ -123,7 +134,7 @@ std::string WriteTextReport(const AuditReport& report, const std::filesystem::pa
       ofs << "    error: " << tr.error << "\n";
       ofs << "    response_snippet: " << tr.response_snippet << "\n";
       ofs << "    rate_limit_headers:\n";
-      for (const auto& [k, v] : tr.rate_limit_headers) {
+      for (const auto &[k, v] : tr.rate_limit_headers) {
         ofs << "      " << k << ": " << v << "\n";
       }
     }
@@ -138,20 +149,22 @@ std::string WriteTextReport(const AuditReport& report, const std::filesystem::pa
   return file.string();
 }
 
-std::string WriteRunLog(const AuditReport& report, const std::filesystem::path& out_dir) {
+std::string WriteRunLog(const AuditReport &report,
+                        const std::filesystem::path &out_dir) {
   std::filesystem::create_directories(out_dir);
   const auto file = out_dir / ("llm_api_runlog_" + TimestampFile() + ".log");
 
   std::ofstream ofs(file, std::ios::out | std::ios::trunc);
-  if (!ofs) return {};
+  if (!ofs)
+    return {};
 
-  ofs << "LLM API Inspector Run Log\n";
+  ofs << "API-Tester Run Log\n";
   ofs << "Generated at (UTC): " << report.generated_at_utc << "\n\n";
-  for (const auto& line : report.run_logs) {
+  for (const auto &line : report.run_logs) {
     ofs << line << "\n";
   }
 
   return file.string();
 }
 
-}  // namespace llaudit
+} // namespace llaudit

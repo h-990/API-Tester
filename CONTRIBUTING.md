@@ -1,6 +1,6 @@
-# Contributing to LLM Audit GUI
+# Contributing to API-Tester
 
-Welcome! Thank you for considering contributing to the LLM Audit GUI project.
+Welcome! Thank you for considering contributing to the API-Tester project.
 
 ## Development Setup
 
@@ -17,7 +17,7 @@ Welcome! Thank you for considering contributing to the LLM Audit GUI project.
    cmake --preset native-release
    cmake --build --preset build-native-release
    ```
-   The executable will be located at `build/native-release/llm_audit_gui`.
+   The executable will be located at `build/native-release/api_tester`.
 
 3. **Submitting Changes**
    - Create a new branch for your feature or bugfix.
@@ -25,4 +25,4 @@ Welcome! Thank you for considering contributing to the LLM Audit GUI project.
    - Ensure the project builds successfully on your platform.
    - Submit a Pull Request describing your changes.
 
-Thanks for your help in improving the LLM Audit GUI!
+Thanks for your help in improving the API-Tester!

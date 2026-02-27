@@ -1,6 +1,6 @@
-# LLM API Inspector (C++ GUI)
+# API-Tester (C++ GUI)
 
-Native desktop GUI app (C++) to audit many LLM API keys in one run.
+Native desktop GUI app (C++) API tester to audit many LLM API keys in one run.
 
 It measures:
 - Auth/model-list reachability
@@ -39,7 +39,7 @@ It measures:
 ```bash
 cmake --preset native-release
 cmake --build --preset build-native-release
-./build/native-release/llm_audit_gui
+./build/native-release/api_tester
 ```
 
 ## Cross Compile (with Zig)

@@ -12,8 +12,8 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <ctime>
 #include <functional>
 #include <iomanip>
@@ -37,9 +37,20 @@ struct HttpResponse {
 constexpr int kSnippetLen = 500;
 
 const std::array<std::pair<std::string, std::string>, 3> kPromptSuite = {
-    std::pair{"reasoning", "Answer in one sentence: If 5 machines make 5 widgets in 5 minutes, how long would 100 machines take to make 100 widgets?"},
-    std::pair{"coding", "Fix this Python bug and return only corrected function code:\n\ndef is_palindrome(s):\n    s = s.lower().replace(' ', '')\n    return s == s.reverse()\n"},
-    std::pair{"axui", "You are given an AX tree:\nAXWindow\n  AXGroup 'Checkout Form'\n    AXTextField id=email label='Email'\n    AXButton id=btn_continue name='Continue' enabled=true\n  AXSheet 'Newsletter' modal=true\n    AXButton id=close_popup name='No thanks' enabled=true\nTask: return JSON with first_action and target_id that actually completes checkout flow."},
+    std::pair{"reasoning",
+              "Answer in one sentence: If 5 machines make 5 widgets in 5 "
+              "minutes, how long would 100 machines take to make 100 widgets?"},
+    std::pair{"coding",
+              "Fix this Python bug and return only corrected function "
+              "code:\n\ndef is_palindrome(s):\n    s = s.lower().replace(' ', "
+              "'')\n    return s == s.reverse()\n"},
+    std::pair{"axui",
+              "You are given an AX tree:\nAXWindow\n  AXGroup 'Checkout "
+              "Form'\n    AXTextField id=email label='Email'\n    AXButton "
+              "id=btn_continue name='Continue' enabled=true\n  AXSheet "
+              "'Newsletter' modal=true\n    AXButton id=close_popup name='No "
+              "thanks' enabled=true\nTask: return JSON with first_action and "
+              "target_id that actually completes checkout flow."},
 };
 
 std::string NowUtc() {
@@ -58,8 +69,9 @@ std::string NowUtc() {
 }
 
 std::string ToLower(std::string s) {
-  std::transform(s.begin(), s.end(), s.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
   return s;
 }
 
@@ -70,23 +82,26 @@ std::string Trim(std::string s) {
   return s;
 }
 
-std::string Snippet(const std::string& s, std::size_t limit = kSnippetLen) {
-  if (s.size() <= limit) return s;
+std::string Snippet(const std::string &s, std::size_t limit = kSnippetLen) {
+  if (s.size() <= limit)
+    return s;
   return s.substr(0, limit);
 }
 
 #if !defined(_WIN32)
-size_t WriteBodyCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+size_t WriteBodyCallback(void *contents, size_t size, size_t nmemb,
+                         void *userp) {
   const size_t total_size = size * nmemb;
-  auto* body = static_cast<std::string*>(userp);
-  body->append(static_cast<char*>(contents), total_size);
+  auto *body = static_cast<std::string *>(userp);
+  body->append(static_cast<char *>(contents), total_size);
   return total_size;
 }
 
-size_t HeaderCallback(char* buffer, size_t size, size_t nitems, void* userdata) {
+size_t HeaderCallback(char *buffer, size_t size, size_t nitems,
+                      void *userdata) {
   const size_t total = size * nitems;
   std::string line(buffer, total);
-  auto* out = static_cast<std::map<std::string, std::string>*>(userdata);
+  auto *out = static_cast<std::map<std::string, std::string> *>(userdata);
   const auto pos = line.find(':');
   if (pos != std::string::npos) {
     const std::string key = ToLower(Trim(line.substr(0, pos)));
@@ -98,20 +113,20 @@ size_t HeaderCallback(char* buffer, size_t size, size_t nitems, void* userdata) 
   return total;
 }
 
-HttpResponse Request(const std::string& method, const std::string& url,
-                     const std::vector<std::string>& headers,
-                     const std::optional<std::string>& body,
+HttpResponse Request(const std::string &method, const std::string &url,
+                     const std::vector<std::string> &headers,
+                     const std::optional<std::string> &body,
                      long timeout_seconds = 60) {
   HttpResponse result;
-  CURL* curl = curl_easy_init();
+  CURL *curl = curl_easy_init();
   if (!curl) {
     result.error = "curl_easy_init failed";
     return result;
   }
 
-  struct curl_slist* header_list = nullptr;
+  struct curl_slist *header_list = nullptr;
   header_list = curl_slist_append(header_list, "User-Agent: llm-audit-gui/1.0");
-  for (const auto& h : headers) {
+  for (const auto &h : headers) {
     header_list = curl_slist_append(header_list, h.c_str());
   }
 
@@ -135,13 +150,16 @@ HttpResponse Request(const std::string& method, const std::string& url,
 
   if (body.has_value()) {
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body->c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, static_cast<long>(body->size()));
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
+                     static_cast<long>(body->size()));
   }
 
   const auto start = std::chrono::steady_clock::now();
   const CURLcode code = curl_easy_perform(curl);
   const auto end = std::chrono::steady_clock::now();
-  result.latency_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  result.latency_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+          .count();
 
   if (code != CURLE_OK) {
     result.error = curl_easy_strerror(code);
@@ -158,32 +176,40 @@ HttpResponse Request(const std::string& method, const std::string& url,
   return result;
 }
 #else
-std::wstring Utf8ToWide(const std::string& s) {
-  if (s.empty()) return L"";
-  const int len = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
-  if (len <= 0) return L"";
+std::wstring Utf8ToWide(const std::string &s) {
+  if (s.empty())
+    return L"";
+  const int len = MultiByteToWideChar(CP_UTF8, 0, s.data(),
+                                      static_cast<int>(s.size()), nullptr, 0);
+  if (len <= 0)
+    return L"";
   std::wstring out(static_cast<std::size_t>(len), L'\0');
-  MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), out.data(), len);
+  MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()),
+                      out.data(), len);
   return out;
 }
 
-std::string WideToUtf8(const std::wstring& s) {
-  if (s.empty()) return {};
-  const int len = WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0,
-                                      nullptr, nullptr);
-  if (len <= 0) return {};
+std::string WideToUtf8(const std::wstring &s) {
+  if (s.empty())
+    return {};
+  const int len =
+      WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()),
+                          nullptr, 0, nullptr, nullptr);
+  if (len <= 0)
+    return {};
   std::string out(static_cast<std::size_t>(len), '\0');
-  WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), out.data(), len, nullptr,
-                      nullptr);
+  WideCharToMultiByte(CP_UTF8, 0, s.data(), static_cast<int>(s.size()),
+                      out.data(), len, nullptr, nullptr);
   return out;
 }
 
 std::string WinErrText(DWORD code) {
   LPWSTR wbuf = nullptr;
-  const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+  const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                      FORMAT_MESSAGE_FROM_SYSTEM |
                       FORMAT_MESSAGE_IGNORE_INSERTS;
-  const DWORD got = FormatMessageW(flags, nullptr, code, 0, reinterpret_cast<LPWSTR>(&wbuf), 0,
-                                   nullptr);
+  const DWORD got = FormatMessageW(flags, nullptr, code, 0,
+                                   reinterpret_cast<LPWSTR>(&wbuf), 0, nullptr);
   std::string out = "winhttp error " + std::to_string(code);
   if (got > 0 && wbuf) {
     out += ": " + Trim(WideToUtf8(std::wstring(wbuf, got)));
@@ -194,24 +220,27 @@ std::string WinErrText(DWORD code) {
   return out;
 }
 
-std::map<std::string, std::string> ParseRawHeaders(const std::wstring& raw) {
+std::map<std::string, std::string> ParseRawHeaders(const std::wstring &raw) {
   std::map<std::string, std::string> out;
   std::wistringstream iss(raw);
   std::wstring line;
   while (std::getline(iss, line)) {
-    if (!line.empty() && line.back() == L'\r') line.pop_back();
+    if (!line.empty() && line.back() == L'\r')
+      line.pop_back();
     const auto pos = line.find(L':');
-    if (pos == std::wstring::npos) continue;
+    if (pos == std::wstring::npos)
+      continue;
     const std::string key = ToLower(Trim(WideToUtf8(line.substr(0, pos))));
     const std::string value = Trim(WideToUtf8(line.substr(pos + 1)));
-    if (!key.empty()) out[key] = value;
+    if (!key.empty())
+      out[key] = value;
   }
   return out;
 }
 
-HttpResponse Request(const std::string& method, const std::string& url,
-                     const std::vector<std::string>& headers,
-                     const std::optional<std::string>& body,
+HttpResponse Request(const std::string &method, const std::string &url,
+                     const std::vector<std::string> &headers,
+                     const std::optional<std::string> &body,
                      long timeout_seconds = 60) {
   HttpResponse result;
   const auto start = std::chrono::steady_clock::now();
@@ -221,11 +250,16 @@ HttpResponse Request(const std::string& method, const std::string& url,
   HINTERNET h_request = nullptr;
 
   auto finish = [&]() -> HttpResponse {
-    if (h_request) WinHttpCloseHandle(h_request);
-    if (h_connect) WinHttpCloseHandle(h_connect);
-    if (h_session) WinHttpCloseHandle(h_session);
+    if (h_request)
+      WinHttpCloseHandle(h_request);
+    if (h_connect)
+      WinHttpCloseHandle(h_connect);
+    if (h_session)
+      WinHttpCloseHandle(h_session);
     const auto end = std::chrono::steady_clock::now();
-    result.latency_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    result.latency_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+            .count();
     return result;
   };
 
@@ -242,16 +276,18 @@ HttpResponse Request(const std::string& method, const std::string& url,
   }
 
   const std::wstring host(comps.lpszHostName, comps.dwHostNameLength);
-  std::wstring path = comps.dwUrlPathLength > 0
-                          ? std::wstring(comps.lpszUrlPath, comps.dwUrlPathLength)
-                          : L"/";
+  std::wstring path =
+      comps.dwUrlPathLength > 0
+          ? std::wstring(comps.lpszUrlPath, comps.dwUrlPathLength)
+          : L"/";
   if (comps.dwExtraInfoLength > 0) {
     path += std::wstring(comps.lpszExtraInfo, comps.dwExtraInfoLength);
   }
   const bool secure = comps.nScheme == INTERNET_SCHEME_HTTPS;
 
-  h_session = WinHttpOpen(L"llm-audit-gui/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                          WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+  h_session =
+      WinHttpOpen(L"llm-audit-gui/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                  WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
   if (!h_session) {
     result.error = WinErrText(GetLastError());
     return finish();
@@ -266,17 +302,18 @@ HttpResponse Request(const std::string& method, const std::string& url,
   }
 
   const std::wstring wmethod = Utf8ToWide(method);
-  h_request = WinHttpOpenRequest(h_connect, wmethod.c_str(), path.c_str(), nullptr,
-                                 WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
-                                 secure ? WINHTTP_FLAG_SECURE : 0);
+  h_request = WinHttpOpenRequest(
+      h_connect, wmethod.c_str(), path.c_str(), nullptr, WINHTTP_NO_REFERER,
+      WINHTTP_DEFAULT_ACCEPT_TYPES, secure ? WINHTTP_FLAG_SECURE : 0);
   if (!h_request) {
     result.error = WinErrText(GetLastError());
     return finish();
   }
 
-  for (const auto& h : headers) {
+  for (const auto &h : headers) {
     const std::wstring wh = Utf8ToWide(h);
-    if (!WinHttpAddRequestHeaders(h_request, wh.c_str(), static_cast<DWORD>(wh.size()),
+    if (!WinHttpAddRequestHeaders(h_request, wh.c_str(),
+                                  static_cast<DWORD>(wh.size()),
                                   WINHTTP_ADDREQ_FLAG_ADD)) {
       result.error = WinErrText(GetLastError());
       return finish();
@@ -284,17 +321,18 @@ HttpResponse Request(const std::string& method, const std::string& url,
   }
   const std::wstring user_agent = L"User-Agent: llm-audit-gui/1.0";
   WinHttpAddRequestHeaders(h_request, user_agent.c_str(),
-                           static_cast<DWORD>(user_agent.size()), WINHTTP_ADDREQ_FLAG_ADD);
+                           static_cast<DWORD>(user_agent.size()),
+                           WINHTTP_ADDREQ_FLAG_ADD);
 
   LPVOID body_ptr = WINHTTP_NO_REQUEST_DATA;
   DWORD body_len = 0;
   if (body.has_value()) {
-    body_ptr = const_cast<char*>(body->data());
+    body_ptr = const_cast<char *>(body->data());
     body_len = static_cast<DWORD>(body->size());
   }
 
-  if (!WinHttpSendRequest(h_request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, body_ptr, body_len, body_len,
-                          0)) {
+  if (!WinHttpSendRequest(h_request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, body_ptr,
+                          body_len, body_len, 0)) {
     result.error = WinErrText(GetLastError());
     return finish();
   }
@@ -305,18 +343,21 @@ HttpResponse Request(const std::string& method, const std::string& url,
 
   DWORD status = 0;
   DWORD status_size = sizeof(status);
-  if (!WinHttpQueryHeaders(h_request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                           WINHTTP_HEADER_NAME_BY_INDEX, &status, &status_size,
-                           WINHTTP_NO_HEADER_INDEX)) {
+  if (!WinHttpQueryHeaders(
+          h_request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+          WINHTTP_HEADER_NAME_BY_INDEX, &status, &status_size,
+          WINHTTP_NO_HEADER_INDEX)) {
     result.error = WinErrText(GetLastError());
     return finish();
   }
   result.status = static_cast<long>(status);
 
   DWORD raw_size = 0;
-  WinHttpQueryHeaders(h_request, WINHTTP_QUERY_RAW_HEADERS_CRLF, WINHTTP_HEADER_NAME_BY_INDEX, nullptr,
-                      &raw_size, WINHTTP_NO_HEADER_INDEX);
-  if (GetLastError() == ERROR_INSUFFICIENT_BUFFER && raw_size > sizeof(wchar_t)) {
+  WinHttpQueryHeaders(h_request, WINHTTP_QUERY_RAW_HEADERS_CRLF,
+                      WINHTTP_HEADER_NAME_BY_INDEX, nullptr, &raw_size,
+                      WINHTTP_NO_HEADER_INDEX);
+  if (GetLastError() == ERROR_INSUFFICIENT_BUFFER &&
+      raw_size > sizeof(wchar_t)) {
     std::wstring raw(raw_size / sizeof(wchar_t), L'\0');
     if (WinHttpQueryHeaders(h_request, WINHTTP_QUERY_RAW_HEADERS_CRLF,
                             WINHTTP_HEADER_NAME_BY_INDEX, raw.data(), &raw_size,
@@ -332,7 +373,8 @@ HttpResponse Request(const std::string& method, const std::string& url,
       result.error = WinErrText(GetLastError());
       return finish();
     }
-    if (available == 0) break;
+    if (available == 0)
+      break;
 
     std::string chunk(available, '\0');
     DWORD read = 0;
@@ -348,28 +390,33 @@ HttpResponse Request(const std::string& method, const std::string& url,
 }
 #endif
 
-nlohmann::json ParseJson(const std::string& s) {
+nlohmann::json ParseJson(const std::string &s) {
   const auto j = nlohmann::json::parse(s, nullptr, false);
-  if (j.is_discarded()) return nlohmann::json::object();
+  if (j.is_discarded())
+    return nlohmann::json::object();
   return j;
 }
 
-std::map<std::string, std::string> RateLimitHeaders(const std::map<std::string, std::string>& headers) {
+std::map<std::string, std::string>
+RateLimitHeaders(const std::map<std::string, std::string> &headers) {
   std::map<std::string, std::string> out;
-  for (const auto& [k, v] : headers) {
-    if (k.find("rate") != std::string::npos || k.find("limit") != std::string::npos ||
-        k.find("quota") != std::string::npos || k.find("retry") != std::string::npos) {
+  for (const auto &[k, v] : headers) {
+    if (k.find("rate") != std::string::npos ||
+        k.find("limit") != std::string::npos ||
+        k.find("quota") != std::string::npos ||
+        k.find("retry") != std::string::npos) {
       out[k] = v;
     }
   }
   return out;
 }
 
-std::vector<std::string> ExtractModelIds(const nlohmann::json& j) {
+std::vector<std::string> ExtractModelIds(const nlohmann::json &j) {
   std::vector<std::string> out;
-  auto add = [&out](const nlohmann::json& arr) {
-    if (!arr.is_array()) return;
-    for (const auto& item : arr) {
+  auto add = [&out](const nlohmann::json &arr) {
+    if (!arr.is_array())
+      return;
+    for (const auto &item : arr) {
       if (item.is_string()) {
         out.push_back(item.get<std::string>());
       } else if (item.is_object()) {
@@ -385,99 +432,115 @@ std::vector<std::string> ExtractModelIds(const nlohmann::json& j) {
   if (j.is_array()) {
     add(j);
   } else if (j.is_object()) {
-    if (j.contains("data")) add(j["data"]);
-    if (j.contains("models")) add(j["models"]);
+    if (j.contains("data"))
+      add(j["data"]);
+    if (j.contains("models"))
+      add(j["models"]);
   }
 
   std::set<std::string> dedup(out.begin(), out.end());
   return {dedup.begin(), dedup.end()};
 }
 
-long long ExtractMaxContext(const nlohmann::json& j) {
+long long ExtractMaxContext(const nlohmann::json &j) {
   long long best = -1;
-  std::function<void(const nlohmann::json&, std::string_view)> scan = [&](const nlohmann::json& node,
-                                                                          std::string_view key_name) {
-    if (node.is_object()) {
-      for (const auto& [k, v] : node.items()) {
-        const std::string k_low = ToLower(k);
-        if (v.is_number_integer()) {
-          const auto n = v.get<long long>();
-          const bool candidate = k_low.find("context") != std::string::npos ||
-                                 k_low.find("inputtokenlimit") != std::string::npos ||
-                                 k_low.find("contextwindow") != std::string::npos ||
-                                 (k_low.find("token") != std::string::npos &&
-                                  k_low.find("output") == std::string::npos &&
-                                  k_low.find("completion") == std::string::npos);
-          if (candidate) {
-            best = std::max(best, n);
+  std::function<void(const nlohmann::json &, std::string_view)> scan =
+      [&](const nlohmann::json &node, std::string_view key_name) {
+        if (node.is_object()) {
+          for (const auto &[k, v] : node.items()) {
+            const std::string k_low = ToLower(k);
+            if (v.is_number_integer()) {
+              const auto n = v.get<long long>();
+              const bool candidate =
+                  k_low.find("context") != std::string::npos ||
+                  k_low.find("inputtokenlimit") != std::string::npos ||
+                  k_low.find("contextwindow") != std::string::npos ||
+                  (k_low.find("token") != std::string::npos &&
+                   k_low.find("output") == std::string::npos &&
+                   k_low.find("completion") == std::string::npos);
+              if (candidate) {
+                best = std::max(best, n);
+              }
+            }
+            scan(v, k_low);
           }
+        } else if (node.is_array()) {
+          for (const auto &item : node)
+            scan(item, key_name);
         }
-        scan(v, k_low);
-      }
-    } else if (node.is_array()) {
-      for (const auto& item : node) scan(item, key_name);
-    }
-  };
+      };
 
   scan(j, "");
   return best;
 }
 
-std::vector<std::string> ExtractCapabilities(const std::vector<std::string>& model_ids,
-                                             const nlohmann::json& raw) {
+std::vector<std::string>
+ExtractCapabilities(const std::vector<std::string> &model_ids,
+                    const nlohmann::json &raw) {
   std::set<std::string> caps;
-  auto consider = [&caps](const std::string& text) {
+  auto consider = [&caps](const std::string &text) {
     const auto t = ToLower(text);
-    if (t.find("vision") != std::string::npos || t.find("vl") != std::string::npos ||
+    if (t.find("vision") != std::string::npos ||
+        t.find("vl") != std::string::npos ||
         t.find("image") != std::string::npos) {
       caps.insert("vision/image");
     }
-    if (t.find("reason") != std::string::npos || t.find("thinking") != std::string::npos) {
+    if (t.find("reason") != std::string::npos ||
+        t.find("thinking") != std::string::npos) {
       caps.insert("reasoning");
     }
-    if (t.find("coder") != std::string::npos || t.find("code") != std::string::npos) {
+    if (t.find("coder") != std::string::npos ||
+        t.find("code") != std::string::npos) {
       caps.insert("coding");
     }
     if (t.find("embed") != std::string::npos) {
       caps.insert("embeddings");
     }
-    if (t.find("audio") != std::string::npos || t.find("speech") != std::string::npos) {
+    if (t.find("audio") != std::string::npos ||
+        t.find("speech") != std::string::npos) {
       caps.insert("audio");
     }
     if (t.find("rerank") != std::string::npos) {
       caps.insert("reranking");
     }
-    if (t.find("tool") != std::string::npos || t.find("function") != std::string::npos) {
+    if (t.find("tool") != std::string::npos ||
+        t.find("function") != std::string::npos) {
       caps.insert("tool_use");
     }
   };
 
-  for (const auto& id : model_ids) consider(id);
+  for (const auto &id : model_ids)
+    consider(id);
 
-  std::function<void(const nlohmann::json&)> walk = [&](const nlohmann::json& node) {
-    if (node.is_object()) {
-      for (const auto& [k, v] : node.items()) {
-        consider(k);
-        if (v.is_string()) consider(v.get<std::string>());
-        walk(v);
-      }
-    } else if (node.is_array()) {
-      for (const auto& it : node) walk(it);
-    }
-  };
+  std::function<void(const nlohmann::json &)> walk =
+      [&](const nlohmann::json &node) {
+        if (node.is_object()) {
+          for (const auto &[k, v] : node.items()) {
+            consider(k);
+            if (v.is_string())
+              consider(v.get<std::string>());
+            walk(v);
+          }
+        } else if (node.is_array()) {
+          for (const auto &it : node)
+            walk(it);
+        }
+      };
   walk(raw);
 
   return {caps.begin(), caps.end()};
 }
 
-std::string ChooseModel(const std::vector<std::string>& discovered,
-                        const std::vector<std::string>& preferred) {
-  if (discovered.empty()) return {};
+std::string ChooseModel(const std::vector<std::string> &discovered,
+                        const std::vector<std::string> &preferred) {
+  if (discovered.empty())
+    return {};
   std::vector<std::string> lower;
   lower.reserve(discovered.size());
-  for (const auto& d : discovered) lower.push_back(ToLower(d));
+  for (const auto &d : discovered)
+    lower.push_back(ToLower(d));
 
-  for (const auto& pref : preferred) {
+  for (const auto &pref : preferred) {
     const auto p = ToLower(pref);
     for (std::size_t i = 0; i < discovered.size(); ++i) {
       if (lower[i] == p || lower[i].find(p) != std::string::npos) {
@@ -488,20 +551,25 @@ std::string ChooseModel(const std::vector<std::string>& discovered,
   return discovered.front();
 }
 
-std::string ExtractOpenAIText(const nlohmann::json& j) {
-  if (!j.is_object() || !j.contains("choices") || !j["choices"].is_array() || j["choices"].empty()) {
+std::string ExtractOpenAIText(const nlohmann::json &j) {
+  if (!j.is_object() || !j.contains("choices") || !j["choices"].is_array() ||
+      j["choices"].empty()) {
     return {};
   }
-  const auto& choice = j["choices"][0];
-  if (!choice.is_object() || !choice.contains("message")) return {};
-  const auto& msg = choice["message"];
-  if (!msg.is_object() || !msg.contains("content")) return {};
-  const auto& content = msg["content"];
-  if (content.is_string()) return content.get<std::string>();
+  const auto &choice = j["choices"][0];
+  if (!choice.is_object() || !choice.contains("message"))
+    return {};
+  const auto &msg = choice["message"];
+  if (!msg.is_object() || !msg.contains("content"))
+    return {};
+  const auto &content = msg["content"];
+  if (content.is_string())
+    return content.get<std::string>();
   if (content.is_array()) {
     std::ostringstream oss;
-    for (const auto& part : content) {
-      if (part.is_object() && part.contains("text") && part["text"].is_string()) {
+    for (const auto &part : content) {
+      if (part.is_object() && part.contains("text") &&
+          part["text"].is_string()) {
         oss << part["text"].get<std::string>() << "\n";
       }
     }
@@ -510,16 +578,20 @@ std::string ExtractOpenAIText(const nlohmann::json& j) {
   return {};
 }
 
-std::string ExtractGoogleText(const nlohmann::json& j) {
-  if (!j.is_object() || !j.contains("candidates") || !j["candidates"].is_array() || j["candidates"].empty()) {
+std::string ExtractGoogleText(const nlohmann::json &j) {
+  if (!j.is_object() || !j.contains("candidates") ||
+      !j["candidates"].is_array() || j["candidates"].empty()) {
     return {};
   }
-  const auto& c0 = j["candidates"][0];
-  if (!c0.is_object() || !c0.contains("content")) return {};
-  const auto& content = c0["content"];
-  if (!content.is_object() || !content.contains("parts") || !content["parts"].is_array()) return {};
+  const auto &c0 = j["candidates"][0];
+  if (!c0.is_object() || !c0.contains("content"))
+    return {};
+  const auto &content = c0["content"];
+  if (!content.is_object() || !content.contains("parts") ||
+      !content["parts"].is_array())
+    return {};
   std::ostringstream oss;
-  for (const auto& part : content["parts"]) {
+  for (const auto &part : content["parts"]) {
     if (part.is_object() && part.contains("text") && part["text"].is_string()) {
       oss << part["text"].get<std::string>() << "\n";
     }
@@ -527,15 +599,18 @@ std::string ExtractGoogleText(const nlohmann::json& j) {
   return oss.str();
 }
 
-std::string ExtractCohereText(const nlohmann::json& j) {
-  if (!j.is_object()) return {};
-  if (j.contains("text") && j["text"].is_string()) return j["text"].get<std::string>();
+std::string ExtractCohereText(const nlohmann::json &j) {
+  if (!j.is_object())
+    return {};
+  if (j.contains("text") && j["text"].is_string())
+    return j["text"].get<std::string>();
   if (j.contains("message") && j["message"].is_object()) {
-    const auto& m = j["message"];
+    const auto &m = j["message"];
     if (m.contains("content") && m["content"].is_array()) {
       std::ostringstream oss;
-      for (const auto& part : m["content"]) {
-        if (part.is_object() && part.contains("text") && part["text"].is_string()) {
+      for (const auto &part : m["content"]) {
+        if (part.is_object() && part.contains("text") &&
+            part["text"].is_string()) {
           oss << part["text"].get<std::string>() << "\n";
         }
       }
@@ -545,10 +620,11 @@ std::string ExtractCohereText(const nlohmann::json& j) {
   return {};
 }
 
-void ScoreProvider(ProviderAudit& p) {
-  auto get_answer = [&](const std::string& name) {
-    for (const auto& t : p.prompt_tests) {
-      if (t.name == name) return ToLower(t.answer);
+void ScoreProvider(ProviderAudit &p) {
+  auto get_answer = [&](const std::string &name) {
+    for (const auto &t : p.prompt_tests) {
+      if (t.name == name)
+        return ToLower(t.answer);
     }
     return std::string{};
   };
@@ -557,8 +633,15 @@ void ScoreProvider(ProviderAudit& p) {
   const auto coding = get_answer("coding");
   const auto axui = get_answer("axui");
 
-  p.score_reasoning = (reasoning.find("5 minute") != std::string::npos || reasoning == "5" || reasoning.find("five minutes") != std::string::npos) ? 1 : 0;
-  p.score_coding = (coding.find("[::-1]") != std::string::npos || coding.find("reversed(") != std::string::npos) ? 1 : 0;
+  p.score_reasoning =
+      (reasoning.find("5 minute") != std::string::npos || reasoning == "5" ||
+       reasoning.find("five minutes") != std::string::npos)
+          ? 1
+          : 0;
+  p.score_coding = (coding.find("[::-1]") != std::string::npos ||
+                    coding.find("reversed(") != std::string::npos)
+                       ? 1
+                       : 0;
 
   const bool has_close = axui.find("close_popup") != std::string::npos;
   const bool has_continue = axui.find("btn_continue") != std::string::npos;
@@ -573,8 +656,9 @@ void ScoreProvider(ProviderAudit& p) {
   p.score_total = p.score_reasoning + p.score_coding + p.score_axui;
 }
 
-void AddTrace(ProviderAudit& p, const std::string& step, const std::string& method,
-              const std::string& url, const HttpResponse& r) {
+void AddTrace(ProviderAudit &p, const std::string &step,
+              const std::string &method, const std::string &url,
+              const HttpResponse &r) {
   RequestTrace t;
   t.step = step;
   t.method = method;
@@ -594,51 +678,58 @@ void AddTrace(ProviderAudit& p, const std::string& step, const std::string& meth
   }
 }
 
-void FinalizeMetrics(ProviderAudit& p) {
+void FinalizeMetrics(ProviderAudit &p) {
   std::vector<long> lats;
-  for (const auto& t : p.request_traces) {
-    if (t.latency_ms >= 0) lats.push_back(t.latency_ms);
+  for (const auto &t : p.request_traces) {
+    if (t.latency_ms >= 0)
+      lats.push_back(t.latency_ms);
   }
   if (!lats.empty()) {
     const auto sum = std::accumulate(lats.begin(), lats.end(), 0LL);
-    p.avg_latency_ms = static_cast<long>(sum / static_cast<long long>(lats.size()));
+    p.avg_latency_ms =
+        static_cast<long>(sum / static_cast<long long>(lats.size()));
   }
 }
 
-std::vector<std::string> TopCandidates(const std::vector<std::string>& discovered,
-                                       const std::vector<std::string>& preferred,
-                                       std::size_t max_count) {
+std::vector<std::string>
+TopCandidates(const std::vector<std::string> &discovered,
+              const std::vector<std::string> &preferred,
+              std::size_t max_count) {
   std::vector<std::string> out;
   std::set<std::string> used;
 
-  for (const auto& pref : preferred) {
+  for (const auto &pref : preferred) {
     const auto p = ToLower(pref);
-    for (const auto& d : discovered) {
+    for (const auto &d : discovered) {
       const auto dl = ToLower(d);
       if ((dl == p || dl.find(p) != std::string::npos) && !used.count(d)) {
         out.push_back(d);
         used.insert(d);
       }
-      if (out.size() >= max_count) return out;
+      if (out.size() >= max_count)
+        return out;
     }
   }
 
-  for (const auto& d : discovered) {
+  for (const auto &d : discovered) {
     if (!used.count(d)) {
       out.push_back(d);
       used.insert(d);
-      if (out.size() >= max_count) return out;
+      if (out.size() >= max_count)
+        return out;
     }
   }
   return out;
 }
 
-ProviderAudit AuditOpenAICompatible(
-    const std::string& provider_id, const std::string& provider_name, const std::string& key,
-    const std::string& list_url, const std::string& chat_url,
-    const std::vector<std::string>& preferred_models,
-    const std::vector<std::string>& extra_headers, const LogFn& log,
-    const std::atomic<bool>& cancel_requested) {
+ProviderAudit
+AuditOpenAICompatible(const std::string &provider_id,
+                      const std::string &provider_name, const std::string &key,
+                      const std::string &list_url, const std::string &chat_url,
+                      const std::vector<std::string> &preferred_models,
+                      const std::vector<std::string> &extra_headers,
+                      const LogFn &log,
+                      const std::atomic<bool> &cancel_requested) {
   ProviderAudit p;
   p.provider_id = provider_id;
   p.provider_name = provider_name;
@@ -667,7 +758,10 @@ ProviderAudit AuditOpenAICompatible(
   const auto models_json = ParseJson(list_resp.body);
   p.raw_payload["models_response"] = models_json;
   const auto discovered = ExtractModelIds(models_json);
-  p.sample_models.assign(discovered.begin(), discovered.begin() + static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
+  p.sample_models.assign(
+      discovered.begin(),
+      discovered.begin() +
+          static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
   p.max_context_seen = ExtractMaxContext(models_json);
   p.capability_tags = ExtractCapabilities(discovered, models_json);
 
@@ -678,7 +772,7 @@ ProviderAudit AuditOpenAICompatible(
   }
 
   const auto model_candidates = TopCandidates(discovered, preferred_models, 8);
-  for (const auto& model : model_candidates) {
+  for (const auto &model : model_candidates) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -687,7 +781,8 @@ ProviderAudit AuditOpenAICompatible(
 
     nlohmann::json payload = {
         {"model", model},
-        {"messages", {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
+        {"messages",
+         {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
         {"temperature", 0},
         {"max_tokens", 64},
     };
@@ -704,7 +799,8 @@ ProviderAudit AuditOpenAICompatible(
     mc.error_snippet = Snippet(chat_resp.body);
     const auto parsed = ParseJson(chat_resp.body);
     const auto answer = ExtractOpenAIText(parsed);
-    mc.working = (chat_resp.status >= 200 && chat_resp.status < 300 && !answer.empty());
+    mc.working =
+        (chat_resp.status >= 200 && chat_resp.status < 300 && !answer.empty());
     p.model_checks.push_back(mc);
     if (mc.working) {
       p.working_models.push_back(model);
@@ -713,9 +809,11 @@ ProviderAudit AuditOpenAICompatible(
     }
   }
 
-  p.model_used = !p.working_models.empty() ? p.working_models.front() : ChooseModel(discovered, preferred_models);
+  p.model_used = !p.working_models.empty()
+                     ? p.working_models.front()
+                     : ChooseModel(discovered, preferred_models);
 
-  for (const auto& prompt : kPromptSuite) {
+  for (const auto &prompt : kPromptSuite) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -753,8 +851,8 @@ ProviderAudit AuditOpenAICompatible(
   return p;
 }
 
-ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
-                          const std::atomic<bool>& cancel_requested) {
+ProviderAudit AuditGoogle(const std::string &key, const LogFn &log,
+                          const std::atomic<bool> &cancel_requested) {
   ProviderAudit p;
   p.provider_id = "google_ai_studio";
   p.provider_name = "Google AI Studio";
@@ -766,7 +864,8 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
     return p;
   }
 
-  const std::string list_url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + key;
+  const std::string list_url =
+      "https://generativelanguage.googleapis.com/v1beta/models?key=" + key;
   log("[Google AI Studio] Fetching model list");
   const auto list_resp = Request("GET", list_url, {}, std::nullopt);
   AddTrace(p, "list_models", "GET", list_url, list_resp);
@@ -781,32 +880,41 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
   p.raw_payload["models_response"] = list_json;
 
   std::vector<std::string> discovered;
-  if (list_json.is_object() && list_json.contains("models") && list_json["models"].is_array()) {
-    for (const auto& model : list_json["models"]) {
-      if (!model.is_object()) continue;
-      if (!model.contains("name") || !model["name"].is_string()) continue;
+  if (list_json.is_object() && list_json.contains("models") &&
+      list_json["models"].is_array()) {
+    for (const auto &model : list_json["models"]) {
+      if (!model.is_object())
+        continue;
+      if (!model.contains("name") || !model["name"].is_string())
+        continue;
       const std::string name = model["name"].get<std::string>();
       bool supports_generate = false;
-      if (model.contains("supportedGenerationMethods") && model["supportedGenerationMethods"].is_array()) {
-        for (const auto& m : model["supportedGenerationMethods"]) {
+      if (model.contains("supportedGenerationMethods") &&
+          model["supportedGenerationMethods"].is_array()) {
+        for (const auto &m : model["supportedGenerationMethods"]) {
           if (m.is_string() && m.get<std::string>() == "generateContent") {
             supports_generate = true;
             break;
           }
         }
       }
-      if (supports_generate) discovered.push_back(name);
+      if (supports_generate)
+        discovered.push_back(name);
     }
   }
 
   std::set<std::string> dedup(discovered.begin(), discovered.end());
   discovered.assign(dedup.begin(), dedup.end());
-  p.sample_models.assign(discovered.begin(), discovered.begin() + static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
+  p.sample_models.assign(
+      discovered.begin(),
+      discovered.begin() +
+          static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
   p.max_context_seen = ExtractMaxContext(list_json);
   p.capability_tags = ExtractCapabilities(discovered, list_json);
 
   const std::vector<std::string> preferred = {
-      "models/gemini-2.5-pro", "models/gemini-2.5-flash", "models/gemini-2.0-flash", "models/gemini-1.5-pro"};
+      "models/gemini-2.5-pro", "models/gemini-2.5-flash",
+      "models/gemini-2.0-flash", "models/gemini-1.5-pro"};
 
   if (discovered.empty()) {
     p.notes = "No generateContent models discovered.";
@@ -815,20 +923,24 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
   }
 
   const auto check_candidates = TopCandidates(discovered, preferred, 8);
-  for (const auto& model : check_candidates) {
+  for (const auto &model : check_candidates) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
       return p;
     }
     nlohmann::json payload = {
-        {"contents", {{{"role", "user"}, {"parts", {{{"text", "Reply with exactly: OK"}}}}}}},
+        {"contents",
+         {{{"role", "user"},
+           {"parts", {{{"text", "Reply with exactly: OK"}}}}}}},
         {"generationConfig", {{"temperature", 0}, {"maxOutputTokens", 64}}},
     };
 
-    const std::string url = "https://generativelanguage.googleapis.com/v1beta/" + model +
-                            ":generateContent?key=" + key;
-    const auto resp = Request("POST", url, {"Content-Type: application/json"}, payload.dump());
+    const std::string url =
+        "https://generativelanguage.googleapis.com/v1beta/" + model +
+        ":generateContent?key=" + key;
+    const auto resp = Request("POST", url, {"Content-Type: application/json"},
+                              payload.dump());
     AddTrace(p, "model_check:" + model, "POST", url, resp);
 
     ModelCheck mc;
@@ -840,13 +952,16 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
     const auto answer = ExtractGoogleText(parsed);
     mc.working = (resp.status >= 200 && resp.status < 300 && !answer.empty());
     p.model_checks.push_back(mc);
-    if (mc.working) p.working_models.push_back(model);
-    if (!mc.working) p.failing_models.push_back(model);
+    if (mc.working)
+      p.working_models.push_back(model);
+    if (!mc.working)
+      p.failing_models.push_back(model);
   }
 
-  p.model_used = !p.working_models.empty() ? p.working_models.front() : ChooseModel(discovered, preferred);
+  p.model_used = !p.working_models.empty() ? p.working_models.front()
+                                           : ChooseModel(discovered, preferred);
 
-  for (const auto& prompt : kPromptSuite) {
+  for (const auto &prompt : kPromptSuite) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -855,13 +970,16 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
     log("[Google AI Studio] Prompt test: " + prompt.first);
 
     nlohmann::json payload = {
-        {"contents", {{{"role", "user"}, {"parts", {{{"text", prompt.second}}}}}}},
+        {"contents",
+         {{{"role", "user"}, {"parts", {{{"text", prompt.second}}}}}}},
         {"generationConfig", {{"temperature", 0}, {"maxOutputTokens", 300}}},
     };
 
-    const std::string url = "https://generativelanguage.googleapis.com/v1beta/" + p.model_used +
-                            ":generateContent?key=" + key;
-    const auto resp = Request("POST", url, {"Content-Type: application/json"}, payload.dump());
+    const std::string url =
+        "https://generativelanguage.googleapis.com/v1beta/" + p.model_used +
+        ":generateContent?key=" + key;
+    const auto resp = Request("POST", url, {"Content-Type: application/json"},
+                              payload.dump());
     AddTrace(p, "prompt_test:" + prompt.first, "POST", url, resp);
 
     PromptTest t;
@@ -870,7 +988,8 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
     t.latency_ms = resp.latency_ms;
     t.rate_limit_headers = RateLimitHeaders(resp.headers);
     t.answer = Snippet(ExtractGoogleText(ParseJson(resp.body)), 1400);
-    if (resp.status < 200 || resp.status >= 300) t.error_snippet = Snippet(resp.body, 700);
+    if (resp.status < 200 || resp.status >= 300)
+      t.error_snippet = Snippet(resp.body, 700);
     p.prompt_tests.push_back(std::move(t));
   }
 
@@ -879,8 +998,8 @@ ProviderAudit AuditGoogle(const std::string& key, const LogFn& log,
   return p;
 }
 
-ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
-                          const std::atomic<bool>& cancel_requested) {
+ProviderAudit AuditCohere(const std::string &key, const LogFn &log,
+                          const std::atomic<bool> &cancel_requested) {
   ProviderAudit p;
   p.provider_id = "cohere";
   p.provider_name = "Cohere";
@@ -905,15 +1024,18 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
   p.models_status = list_resp.status;
   p.models_latency_ms = list_resp.latency_ms;
   p.models_rate_limit_headers = RateLimitHeaders(list_resp.headers);
-  if (list_resp.status < 200 || list_resp.status >= 300) p.error_snippet = Snippet(list_resp.body);
+  if (list_resp.status < 200 || list_resp.status >= 300)
+    p.error_snippet = Snippet(list_resp.body);
 
   const auto list_json = ParseJson(list_resp.body);
   p.raw_payload["models_response"] = list_json;
 
   std::vector<std::string> discovered;
-  if (list_json.is_object() && list_json.contains("models") && list_json["models"].is_array()) {
-    for (const auto& model : list_json["models"]) {
-      if (model.is_object() && model.contains("name") && model["name"].is_string()) {
+  if (list_json.is_object() && list_json.contains("models") &&
+      list_json["models"].is_array()) {
+    for (const auto &model : list_json["models"]) {
+      if (model.is_object() && model.contains("name") &&
+          model["name"].is_string()) {
         discovered.push_back(model["name"].get<std::string>());
       } else if (model.is_string()) {
         discovered.push_back(model.get<std::string>());
@@ -923,17 +1045,23 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
 
   std::set<std::string> dedup(discovered.begin(), discovered.end());
   discovered.assign(dedup.begin(), dedup.end());
-  p.sample_models.assign(discovered.begin(), discovered.begin() + static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
+  p.sample_models.assign(
+      discovered.begin(),
+      discovered.begin() +
+          static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
   p.max_context_seen = ExtractMaxContext(list_json);
   p.capability_tags = ExtractCapabilities(discovered, list_json);
 
-  const std::vector<std::string> preferred = {
-      "command-a-reasoning-08-2025", "command-r-08-2024", "command-a-vision-07-2025"};
+  const std::vector<std::string> preferred = {"command-a-reasoning-08-2025",
+                                              "command-r-08-2024",
+                                              "command-a-vision-07-2025"};
 
   std::vector<std::string> chat_candidates;
-  for (const auto& m : discovered) {
+  for (const auto &m : discovered) {
     const auto ml = ToLower(m);
-    if (ml.find("embed") != std::string::npos || ml.find("rerank") != std::string::npos) continue;
+    if (ml.find("embed") != std::string::npos ||
+        ml.find("rerank") != std::string::npos)
+      continue;
     chat_candidates.push_back(m);
   }
 
@@ -944,7 +1072,7 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
   }
 
   const auto checks = TopCandidates(chat_candidates, preferred, 8);
-  for (const auto& model : checks) {
+  for (const auto &model : checks) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -960,23 +1088,30 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
 
     auto headers = base_headers;
     headers.push_back("Content-Type: application/json");
-    const auto resp = Request("POST", "https://api.cohere.com/v1/chat", headers, payload.dump());
-    AddTrace(p, "model_check:" + model, "POST", "https://api.cohere.com/v1/chat", resp);
+    const auto resp = Request("POST", "https://api.cohere.com/v1/chat", headers,
+                              payload.dump());
+    AddTrace(p, "model_check:" + model, "POST",
+             "https://api.cohere.com/v1/chat", resp);
 
     ModelCheck mc;
     mc.model = model;
     mc.status = resp.status;
     mc.latency_ms = resp.latency_ms;
     mc.error_snippet = Snippet(resp.body);
-    mc.working = (resp.status >= 200 && resp.status < 300 && !ExtractCohereText(ParseJson(resp.body)).empty());
+    mc.working = (resp.status >= 200 && resp.status < 300 &&
+                  !ExtractCohereText(ParseJson(resp.body)).empty());
     p.model_checks.push_back(mc);
-    if (mc.working) p.working_models.push_back(model);
-    if (!mc.working) p.failing_models.push_back(model);
+    if (mc.working)
+      p.working_models.push_back(model);
+    if (!mc.working)
+      p.failing_models.push_back(model);
   }
 
-  p.model_used = !p.working_models.empty() ? p.working_models.front() : ChooseModel(chat_candidates, preferred);
+  p.model_used = !p.working_models.empty()
+                     ? p.working_models.front()
+                     : ChooseModel(chat_candidates, preferred);
 
-  for (const auto& prompt : kPromptSuite) {
+  for (const auto &prompt : kPromptSuite) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -993,8 +1128,10 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
 
     auto headers = base_headers;
     headers.push_back("Content-Type: application/json");
-    const auto resp = Request("POST", "https://api.cohere.com/v1/chat", headers, payload.dump());
-    AddTrace(p, "prompt_test:" + prompt.first, "POST", "https://api.cohere.com/v1/chat", resp);
+    const auto resp = Request("POST", "https://api.cohere.com/v1/chat", headers,
+                              payload.dump());
+    AddTrace(p, "prompt_test:" + prompt.first, "POST",
+             "https://api.cohere.com/v1/chat", resp);
 
     PromptTest t;
     t.name = prompt.first;
@@ -1002,7 +1139,8 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
     t.latency_ms = resp.latency_ms;
     t.rate_limit_headers = RateLimitHeaders(resp.headers);
     t.answer = Snippet(ExtractCohereText(ParseJson(resp.body)), 1400);
-    if (resp.status < 200 || resp.status >= 300) t.error_snippet = Snippet(resp.body, 700);
+    if (resp.status < 200 || resp.status >= 300)
+      t.error_snippet = Snippet(resp.body, 700);
     p.prompt_tests.push_back(std::move(t));
   }
 
@@ -1011,8 +1149,8 @@ ProviderAudit AuditCohere(const std::string& key, const LogFn& log,
   return p;
 }
 
-ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
-                          const std::atomic<bool>& cancel_requested) {
+ProviderAudit AuditVercel(const std::string &key, const LogFn &log,
+                          const std::atomic<bool> &cancel_requested) {
   ProviderAudit p;
   p.provider_id = "vercel";
   p.provider_name = "Vercel AI Gateway";
@@ -1027,31 +1165,39 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
   const std::vector<std::string> headers = {"Authorization: Bearer " + key};
 
   log("[Vercel] Validating user token");
-  const auto auth_resp = Request("GET", "https://api.vercel.com/v2/user", headers, std::nullopt);
+  const auto auth_resp =
+      Request("GET", "https://api.vercel.com/v2/user", headers, std::nullopt);
   AddTrace(p, "auth_user", "GET", "https://api.vercel.com/v2/user", auth_resp);
   p.auth_status = auth_resp.status;
   p.auth_latency_ms = auth_resp.latency_ms;
   p.auth_rate_limit_headers = RateLimitHeaders(auth_resp.headers);
 
   log("[Vercel] Fetching AI Gateway models");
-  const auto list_resp = Request("GET", "https://ai-gateway.vercel.sh/v1/models", headers, std::nullopt);
-  AddTrace(p, "list_models", "GET", "https://ai-gateway.vercel.sh/v1/models", list_resp);
+  const auto list_resp = Request(
+      "GET", "https://ai-gateway.vercel.sh/v1/models", headers, std::nullopt);
+  AddTrace(p, "list_models", "GET", "https://ai-gateway.vercel.sh/v1/models",
+           list_resp);
   p.models_status = list_resp.status;
   p.models_latency_ms = list_resp.latency_ms;
   p.models_rate_limit_headers = RateLimitHeaders(list_resp.headers);
-  if (list_resp.status < 200 || list_resp.status >= 300) p.error_snippet = Snippet(list_resp.body);
+  if (list_resp.status < 200 || list_resp.status >= 300)
+    p.error_snippet = Snippet(list_resp.body);
 
   const auto list_json = ParseJson(list_resp.body);
   p.raw_payload["auth_response"] = ParseJson(auth_resp.body);
   p.raw_payload["models_response"] = list_json;
 
   auto discovered = ExtractModelIds(list_json);
-  p.sample_models.assign(discovered.begin(), discovered.begin() + static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
+  p.sample_models.assign(
+      discovered.begin(),
+      discovered.begin() +
+          static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
   p.max_context_seen = ExtractMaxContext(list_json);
   p.capability_tags = ExtractCapabilities(discovered, list_json);
 
   const std::vector<std::string> preferred = {
-      "openai/gpt-5", "openai/gpt-4.1", "openai/gpt-4o", "anthropic/claude-3.7-sonnet", "google/gemini-2.5-pro"};
+      "openai/gpt-5", "openai/gpt-4.1", "openai/gpt-4o",
+      "anthropic/claude-3.7-sonnet", "google/gemini-2.5-pro"};
 
   if (discovered.empty()) {
     p.notes = "No models discovered from AI Gateway.";
@@ -1063,7 +1209,7 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
   std::vector<std::string> post_headers = headers;
   post_headers.push_back("Content-Type: application/json");
 
-  for (const auto& model : checks) {
+  for (const auto &model : checks) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -1071,27 +1217,34 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
     }
     nlohmann::json payload = {
         {"model", model},
-        {"messages", {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
+        {"messages",
+         {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
         {"max_tokens", 64},
     };
-    const auto resp = Request("POST", "https://ai-gateway.vercel.sh/v1/chat/completions", post_headers,
-                              payload.dump());
-    AddTrace(p, "model_check:" + model, "POST", "https://ai-gateway.vercel.sh/v1/chat/completions", resp);
+    const auto resp =
+        Request("POST", "https://ai-gateway.vercel.sh/v1/chat/completions",
+                post_headers, payload.dump());
+    AddTrace(p, "model_check:" + model, "POST",
+             "https://ai-gateway.vercel.sh/v1/chat/completions", resp);
 
     ModelCheck mc;
     mc.model = model;
     mc.status = resp.status;
     mc.latency_ms = resp.latency_ms;
     mc.error_snippet = Snippet(resp.body);
-    mc.working = (resp.status >= 200 && resp.status < 300 && !ExtractOpenAIText(ParseJson(resp.body)).empty());
+    mc.working = (resp.status >= 200 && resp.status < 300 &&
+                  !ExtractOpenAIText(ParseJson(resp.body)).empty());
     p.model_checks.push_back(mc);
-    if (mc.working) p.working_models.push_back(model);
-    if (!mc.working) p.failing_models.push_back(model);
+    if (mc.working)
+      p.working_models.push_back(model);
+    if (!mc.working)
+      p.failing_models.push_back(model);
   }
 
-  p.model_used = !p.working_models.empty() ? p.working_models.front() : ChooseModel(discovered, preferred);
+  p.model_used = !p.working_models.empty() ? p.working_models.front()
+                                           : ChooseModel(discovered, preferred);
 
-  for (const auto& prompt : kPromptSuite) {
+  for (const auto &prompt : kPromptSuite) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -1104,9 +1257,11 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
         {"messages", {{{"role", "user"}, {"content", prompt.second}}}},
         {"max_tokens", 300},
     };
-    const auto resp = Request("POST", "https://ai-gateway.vercel.sh/v1/chat/completions", post_headers,
-                              payload.dump());
-    AddTrace(p, "prompt_test:" + prompt.first, "POST", "https://ai-gateway.vercel.sh/v1/chat/completions", resp);
+    const auto resp =
+        Request("POST", "https://ai-gateway.vercel.sh/v1/chat/completions",
+                post_headers, payload.dump());
+    AddTrace(p, "prompt_test:" + prompt.first, "POST",
+             "https://ai-gateway.vercel.sh/v1/chat/completions", resp);
 
     PromptTest t;
     t.name = prompt.first;
@@ -1114,7 +1269,8 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
     t.latency_ms = resp.latency_ms;
     t.rate_limit_headers = RateLimitHeaders(resp.headers);
     t.answer = Snippet(ExtractOpenAIText(ParseJson(resp.body)), 1400);
-    if (resp.status < 200 || resp.status >= 300) t.error_snippet = Snippet(resp.body, 700);
+    if (resp.status < 200 || resp.status >= 300)
+      t.error_snippet = Snippet(resp.body, 700);
     p.prompt_tests.push_back(std::move(t));
   }
 
@@ -1123,9 +1279,10 @@ ProviderAudit AuditVercel(const std::string& key, const LogFn& log,
   return p;
 }
 
-ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string& provider_name,
-                               const std::string& token, const LogFn& log,
-                               const std::atomic<bool>& cancel_requested) {
+ProviderAudit AuditGitHubToken(const std::string &provider_id,
+                               const std::string &provider_name,
+                               const std::string &token, const LogFn &log,
+                               const std::atomic<bool> &cancel_requested) {
   ProviderAudit p;
   p.provider_id = provider_id;
   p.provider_name = provider_name;
@@ -1143,7 +1300,8 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
   };
 
   log("[" + provider_name + "] Validating GitHub user scope");
-  const auto user_resp = Request("GET", "https://api.github.com/user", gh_headers, std::nullopt);
+  const auto user_resp =
+      Request("GET", "https://api.github.com/user", gh_headers, std::nullopt);
   AddTrace(p, "auth_user", "GET", "https://api.github.com/user", user_resp);
   p.auth_status = user_resp.status;
   p.auth_latency_ms = user_resp.latency_ms;
@@ -1153,21 +1311,27 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
       "Authorization: Bearer " + token,
   };
   log("[" + provider_name + "] Fetching GitHub Models catalog");
-  const auto list_resp = Request("GET", "https://models.inference.ai.azure.com/models", models_headers,
-                                 std::nullopt);
-  AddTrace(p, "list_models", "GET", "https://models.inference.ai.azure.com/models", list_resp);
+  const auto list_resp =
+      Request("GET", "https://models.inference.ai.azure.com/models",
+              models_headers, std::nullopt);
+  AddTrace(p, "list_models", "GET",
+           "https://models.inference.ai.azure.com/models", list_resp);
 
   p.models_status = list_resp.status;
   p.models_latency_ms = list_resp.latency_ms;
   p.models_rate_limit_headers = RateLimitHeaders(list_resp.headers);
-  if (list_resp.status < 200 || list_resp.status >= 300) p.error_snippet = Snippet(list_resp.body);
+  if (list_resp.status < 200 || list_resp.status >= 300)
+    p.error_snippet = Snippet(list_resp.body);
 
   const auto list_json = ParseJson(list_resp.body);
   p.raw_payload["user_response"] = ParseJson(user_resp.body);
   p.raw_payload["models_response"] = list_json;
 
   auto discovered = ExtractModelIds(list_json);
-  p.sample_models.assign(discovered.begin(), discovered.begin() + static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
+  p.sample_models.assign(
+      discovered.begin(),
+      discovered.begin() +
+          static_cast<long>(std::min<std::size_t>(discovered.size(), 30)));
   p.max_context_seen = ExtractMaxContext(list_json);
   p.capability_tags = ExtractCapabilities(discovered, list_json);
 
@@ -1184,7 +1348,7 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
   std::vector<std::string> post_headers = models_headers;
   post_headers.push_back("Content-Type: application/json");
 
-  for (const auto& model : checks) {
+  for (const auto &model : checks) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -1193,29 +1357,36 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
 
     nlohmann::json payload = {
         {"model", model},
-        {"messages", {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
+        {"messages",
+         {{{"role", "user"}, {"content", "Reply with exactly: OK"}}}},
         {"temperature", 0},
         {"max_tokens", 64},
     };
 
-    const auto resp = Request("POST", "https://models.inference.ai.azure.com/chat/completions", post_headers,
-                              payload.dump());
-    AddTrace(p, "model_check:" + model, "POST", "https://models.inference.ai.azure.com/chat/completions", resp);
+    const auto resp = Request(
+        "POST", "https://models.inference.ai.azure.com/chat/completions",
+        post_headers, payload.dump());
+    AddTrace(p, "model_check:" + model, "POST",
+             "https://models.inference.ai.azure.com/chat/completions", resp);
 
     ModelCheck mc;
     mc.model = model;
     mc.status = resp.status;
     mc.latency_ms = resp.latency_ms;
     mc.error_snippet = Snippet(resp.body);
-    mc.working = (resp.status >= 200 && resp.status < 300 && !ExtractOpenAIText(ParseJson(resp.body)).empty());
+    mc.working = (resp.status >= 200 && resp.status < 300 &&
+                  !ExtractOpenAIText(ParseJson(resp.body)).empty());
     p.model_checks.push_back(mc);
-    if (mc.working) p.working_models.push_back(model);
-    if (!mc.working) p.failing_models.push_back(model);
+    if (mc.working)
+      p.working_models.push_back(model);
+    if (!mc.working)
+      p.failing_models.push_back(model);
   }
 
-  p.model_used = !p.working_models.empty() ? p.working_models.front() : ChooseModel(discovered, preferred);
+  p.model_used = !p.working_models.empty() ? p.working_models.front()
+                                           : ChooseModel(discovered, preferred);
 
-  for (const auto& prompt : kPromptSuite) {
+  for (const auto &prompt : kPromptSuite) {
     if (cancel_requested.load()) {
       p.notes += " Audit canceled by user.";
       FinalizeMetrics(p);
@@ -1230,9 +1401,11 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
         {"max_tokens", 300},
     };
 
-    const auto resp = Request("POST", "https://models.inference.ai.azure.com/chat/completions", post_headers,
-                              payload.dump());
-    AddTrace(p, "prompt_test:" + prompt.first, "POST", "https://models.inference.ai.azure.com/chat/completions", resp);
+    const auto resp = Request(
+        "POST", "https://models.inference.ai.azure.com/chat/completions",
+        post_headers, payload.dump());
+    AddTrace(p, "prompt_test:" + prompt.first, "POST",
+             "https://models.inference.ai.azure.com/chat/completions", resp);
 
     PromptTest t;
     t.name = prompt.first;
@@ -1240,7 +1413,8 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
     t.latency_ms = resp.latency_ms;
     t.rate_limit_headers = RateLimitHeaders(resp.headers);
     t.answer = Snippet(ExtractOpenAIText(ParseJson(resp.body)), 1400);
-    if (resp.status < 200 || resp.status >= 300) t.error_snippet = Snippet(resp.body, 700);
+    if (resp.status < 200 || resp.status >= 300)
+      t.error_snippet = Snippet(resp.body, 700);
     p.prompt_tests.push_back(std::move(t));
   }
 
@@ -1249,10 +1423,11 @@ ProviderAudit AuditGitHubToken(const std::string& provider_id, const std::string
   return p;
 }
 
-}  // namespace
+} // namespace
 
-AuditReport AuditEngine::Run(const std::map<std::string, std::string>& keys, const LogFn& log,
-                             const std::atomic<bool>& cancel_requested) {
+AuditReport AuditEngine::Run(const std::map<std::string, std::string> &keys,
+                             const LogFn &log,
+                             const std::atomic<bool> &cancel_requested) {
   AuditReport report;
   report.generated_at_utc = NowUtc();
 
@@ -1260,15 +1435,17 @@ AuditReport AuditEngine::Run(const std::map<std::string, std::string>& keys, con
   curl_global_init(CURL_GLOBAL_DEFAULT);
 #endif
 
-  auto push_log = [&](const std::string& message) {
+  auto push_log = [&](const std::string &message) {
     const std::string line = "[" + NowUtc() + "] " + message;
     report.run_logs.push_back(line);
-    if (log) log(line);
+    if (log)
+      log(line);
   };
 
-  auto key_of = [&](const std::string& k) {
+  auto key_of = [&](const std::string &k) {
     const auto it = keys.find(k);
-    if (it == keys.end()) return std::string{};
+    if (it == keys.end())
+      return std::string{};
     return it->second;
   };
 
@@ -1283,60 +1460,68 @@ AuditReport AuditEngine::Run(const std::map<std::string, std::string>& keys, con
   push_log("Starting full provider audit");
 
   report.providers.push_back(AuditOpenAICompatible(
-      "openrouter", "OpenRouter", key_of("openrouter"), "https://openrouter.ai/api/v1/models",
+      "openrouter", "OpenRouter", key_of("openrouter"),
+      "https://openrouter.ai/api/v1/models",
       "https://openrouter.ai/api/v1/chat/completions",
-      {"openai/gpt-4.1", "openai/gpt-4o", "anthropic/claude-3.7-sonnet", "google/gemini-2.5-pro"},
+      {"openai/gpt-4.1", "openai/gpt-4o", "anthropic/claude-3.7-sonnet",
+       "google/gemini-2.5-pro"},
       {}, push_log, cancel_requested));
 
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditGoogle(key_of("google_ai_studio"), push_log, cancel_requested));
+    report.providers.push_back(
+        AuditGoogle(key_of("google_ai_studio"), push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
     report.providers.push_back(AuditOpenAICompatible(
-        "mistral", "Mistral", key_of("mistral"), "https://api.mistral.ai/v1/models",
+        "mistral", "Mistral", key_of("mistral"),
+        "https://api.mistral.ai/v1/models",
         "https://api.mistral.ai/v1/chat/completions",
-        {"mistral-large-latest", "magistral-medium-latest", "mistral-medium-latest", "mistral-small-latest"},
+        {"mistral-large-latest", "magistral-medium-latest",
+         "mistral-medium-latest", "mistral-small-latest"},
         {}, push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditVercel(key_of("vercel"), push_log, cancel_requested));
+    report.providers.push_back(
+        AuditVercel(key_of("vercel"), push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
     report.providers.push_back(AuditOpenAICompatible(
         "groq", "Groq", key_of("groq"), "https://api.groq.com/openai/v1/models",
         "https://api.groq.com/openai/v1/chat/completions",
-        {"llama-3.3-70b-versatile", "deepseek-r1-distill-llama-70b", "qwen/qwen3-32b"}, {},
-        push_log, cancel_requested));
+        {"llama-3.3-70b-versatile", "deepseek-r1-distill-llama-70b",
+         "qwen/qwen3-32b"},
+        {}, push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditCohere(key_of("cohere"), push_log, cancel_requested));
+    report.providers.push_back(
+        AuditCohere(key_of("cohere"), push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
     report.providers.push_back(AuditOpenAICompatible(
         "ai21", "AI21", key_of("ai21"), "https://api.ai21.com/studio/v1/models",
         "https://api.ai21.com/studio/v1/chat/completions",
-        {"jamba-1.5-large", "jamba-large", "jamba-1.5-mini", "jamba-mini"}, {}, push_log,
-        cancel_requested));
+        {"jamba-1.5-large", "jamba-large", "jamba-1.5-mini", "jamba-mini"}, {},
+        push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditGitHubToken("github_chatgpt", "GitHub PAT (chatgpt)",
-                                                key_of("github_chatgpt"), push_log,
-                                                cancel_requested));
+    report.providers.push_back(
+        AuditGitHubToken("github_chatgpt", "GitHub PAT (chatgpt)",
+                         key_of("github_chatgpt"), push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditGitHubToken("github_chatgpt5", "GitHub PAT (chatgpt5)",
-                                                key_of("github_chatgpt5"), push_log,
-                                                cancel_requested));
+    report.providers.push_back(AuditGitHubToken(
+        "github_chatgpt5", "GitHub PAT (chatgpt5)", key_of("github_chatgpt5"),
+        push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditGitHubToken("github_deepseek", "GitHub PAT (deepseek)",
-                                                key_of("github_deepseek"), push_log,
-                                                cancel_requested));
+    report.providers.push_back(AuditGitHubToken(
+        "github_deepseek", "GitHub PAT (deepseek)", key_of("github_deepseek"),
+        push_log, cancel_requested));
   }
   if (!cancel_requested.load()) {
-    report.providers.push_back(AuditGitHubToken("github_jamba", "GitHub PAT (jamba)",
-                                                key_of("github_jamba"), push_log,
-                                                cancel_requested));
+    report.providers.push_back(
+        AuditGitHubToken("github_jamba", "GitHub PAT (jamba)",
+                         key_of("github_jamba"), push_log, cancel_requested));
   }
 
   if (cancel_requested.load()) {
@@ -1351,13 +1536,13 @@ AuditReport AuditEngine::Run(const std::map<std::string, std::string>& keys, con
   return report;
 }
 
-nlohmann::json ReportToJson(const AuditReport& report) {
+nlohmann::json ReportToJson(const AuditReport &report) {
   nlohmann::json out;
   out["generated_at_utc"] = report.generated_at_utc;
   out["run_logs"] = report.run_logs;
   out["providers"] = nlohmann::json::array();
 
-  for (const auto& p : report.providers) {
+  for (const auto &p : report.providers) {
     nlohmann::json pj;
     pj["provider_id"] = p.provider_id;
     pj["provider_name"] = p.provider_name;
@@ -1387,7 +1572,7 @@ nlohmann::json ReportToJson(const AuditReport& report) {
     pj["error_snippet"] = p.error_snippet;
 
     pj["model_checks"] = nlohmann::json::array();
-    for (const auto& c : p.model_checks) {
+    for (const auto &c : p.model_checks) {
       pj["model_checks"].push_back({
           {"model", c.model},
           {"status", c.status},
@@ -1398,7 +1583,7 @@ nlohmann::json ReportToJson(const AuditReport& report) {
     }
 
     pj["prompt_tests"] = nlohmann::json::array();
-    for (const auto& t : p.prompt_tests) {
+    for (const auto &t : p.prompt_tests) {
       pj["prompt_tests"].push_back({
           {"name", t.name},
           {"status", t.status},
@@ -1410,7 +1595,7 @@ nlohmann::json ReportToJson(const AuditReport& report) {
     }
 
     pj["request_traces"] = nlohmann::json::array();
-    for (const auto& tr : p.request_traces) {
+    for (const auto &tr : p.request_traces) {
       pj["request_traces"].push_back({
           {"step", tr.step},
           {"method", tr.method},
@@ -1430,34 +1615,42 @@ nlohmann::json ReportToJson(const AuditReport& report) {
   return out;
 }
 
-std::string BuildSummaryText(const AuditReport& report) {
+std::string BuildSummaryText(const AuditReport &report) {
   std::ostringstream oss;
-  oss << "LLM API Audit Summary\n";
+  oss << "API-Tester Audit Summary\n";
   oss << "Generated at (UTC): " << report.generated_at_utc << "\n\n";
 
-  for (const auto& p : report.providers) {
+  for (const auto &p : report.providers) {
     oss << "Provider: " << p.provider_name << " (" << p.provider_id << ")\n";
     oss << "Key supplied: " << (p.key_supplied ? "yes" : "no") << "\n";
-    oss << "Models status: " << p.models_status << " | Auth status: " << p.auth_status << "\n";
+    oss << "Models status: " << p.models_status
+        << " | Auth status: " << p.auth_status << "\n";
     oss << "Model used: " << p.model_used << "\n";
-    oss << "Working models: " << p.working_models.size() << " | Failing models: " << p.failing_models.size() << "\n";
+    oss << "Working models: " << p.working_models.size()
+        << " | Failing models: " << p.failing_models.size() << "\n";
     oss << "Max context seen: " << p.max_context_seen << "\n";
-    oss << "Score (reasoning/coding/ax/total): " << p.score_reasoning << "/" << p.score_coding << "/"
-        << p.score_axui << "/" << p.score_total << "\n";
-    oss << "Requests total/success/fail: " << p.total_requests << "/" << p.successful_requests << "/"
-        << p.failed_requests << " | avg latency(ms): " << p.avg_latency_ms << "\n";
-    if (!p.notes.empty()) oss << "Notes: " << p.notes << "\n";
-    if (!p.error_snippet.empty()) oss << "Error snippet: " << p.error_snippet << "\n";
+    oss << "Score (reasoning/coding/ax/total): " << p.score_reasoning << "/"
+        << p.score_coding << "/" << p.score_axui << "/" << p.score_total
+        << "\n";
+    oss << "Requests total/success/fail: " << p.total_requests << "/"
+        << p.successful_requests << "/" << p.failed_requests
+        << " | avg latency(ms): " << p.avg_latency_ms << "\n";
+    if (!p.notes.empty())
+      oss << "Notes: " << p.notes << "\n";
+    if (!p.error_snippet.empty())
+      oss << "Error snippet: " << p.error_snippet << "\n";
 
     if (!p.models_rate_limit_headers.empty()) {
       oss << "Model rate-limit headers:\n";
-      for (const auto& [k, v] : p.models_rate_limit_headers) oss << "  " << k << ": " << v << "\n";
+      for (const auto &[k, v] : p.models_rate_limit_headers)
+        oss << "  " << k << ": " << v << "\n";
     }
 
     if (!p.prompt_tests.empty()) {
       oss << "Prompt tests:\n";
-      for (const auto& t : p.prompt_tests) {
-        oss << "  - " << t.name << ": status=" << t.status << ", latency_ms=" << t.latency_ms << "\n";
+      for (const auto &t : p.prompt_tests) {
+        oss << "  - " << t.name << ": status=" << t.status
+            << ", latency_ms=" << t.latency_ms << "\n";
       }
     }
 
@@ -1467,4 +1660,4 @@ std::string BuildSummaryText(const AuditReport& report) {
   return oss.str();
 }
 
-}  // namespace llaudit
+} // namespace llaudit
