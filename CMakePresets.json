@@ -1,0 +1,73 @@
+{
+  "version": 5,
+  "configurePresets": [
+    {
+      "name": "native-debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "native-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "zig-linux-x86_64",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/zig-linux-x86_64",
+      "toolchainFile": "${sourceDir}/toolchains/zig-toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZIG_SYSTEM_NAME": "Linux",
+        "ZIG_TARGET": "x86_64-linux-gnu"
+      }
+    },
+    {
+      "name": "zig-linux-aarch64",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/zig-linux-aarch64",
+      "toolchainFile": "${sourceDir}/toolchains/zig-toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZIG_SYSTEM_NAME": "Linux",
+        "ZIG_TARGET": "aarch64-linux-gnu"
+      }
+    },
+    {
+      "name": "zig-windows-x86_64",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/zig-windows-x86_64",
+      "toolchainFile": "${sourceDir}/toolchains/zig-toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZIG_SYSTEM_NAME": "Windows",
+        "ZIG_TARGET": "x86_64-windows-gnu"
+      }
+    },
+    {
+      "name": "zig-macos-aarch64",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/zig-macos-aarch64",
+      "toolchainFile": "${sourceDir}/toolchains/zig-toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZIG_SYSTEM_NAME": "Darwin",
+        "ZIG_TARGET": "aarch64-macos"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "build-native-debug", "configurePreset": "native-debug" },
+    { "name": "build-native-release", "configurePreset": "native-release" },
+    { "name": "build-zig-linux-x86_64", "configurePreset": "zig-linux-x86_64" },
+    { "name": "build-zig-linux-aarch64", "configurePreset": "zig-linux-aarch64" },
+    { "name": "build-zig-windows-x86_64", "configurePreset": "zig-windows-x86_64" },
+    { "name": "build-zig-macos-aarch64", "configurePreset": "zig-macos-aarch64" }
+  ]
+}
